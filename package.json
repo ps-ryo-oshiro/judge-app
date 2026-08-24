@@ -1,0 +1,13 @@
+{
+  "name": "judge-app",
+  "version": "1.0.0",
+  "description": "審査得点発表システム MVP (Team A〜Team J)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
