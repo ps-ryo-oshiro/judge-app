@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>審査得点発表システム</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
       margin: 0;
@@ -13,22 +17,48 @@
       color: #fff;
       min-height: 100vh;
     }
+
     header {
       text-align: center;
       padding: 40px 20px 10px;
     }
-    header h1 { font-size: 32px; margin: 0; }
-    header p { color: #aab; margin-top: 8px; }
-    main { max-width: 760px; margin: 0 auto; padding: 20px 20px 60px; }
+
+    header h1 {
+      font-size: 32px;
+      margin: 0;
+    }
+
+    header p {
+      color: #aab;
+      margin-top: 8px;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 20px 20px 60px;
+    }
+
     .group {
       background: #161a44;
       border-radius: 12px;
       padding: 22px 24px;
       margin-bottom: 22px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
-    .group h2 { margin: 0 0 16px; font-size: 18px; color: #ffd54a; }
-    .links { display: flex; flex-wrap: wrap; gap: 12px; }
+
+    .group h2 {
+      margin: 0 0 16px;
+      font-size: 18px;
+      color: #ffd54a;
+    }
+
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
     a.tile {
       display: block;
       padding: 16px 22px;
@@ -39,30 +69,57 @@
       color: #fff;
       transition: transform 0.1s, opacity 0.1s;
     }
-    a.tile:hover { transform: translateY(-2px); opacity: 0.9; }
-    a.display { background: linear-gradient(135deg, #b21f1f, #fdbb2d); flex: 1; text-align: center; }
-    a.admin { background: #1a2a6c; flex: 1; text-align: center; }
-    a.judge { background: #2a3f8c; min-width: 130px; text-align: center; }
-    .note { color: #889; font-size: 13px; margin-top: 6px; }
+
+    a.tile:hover {
+      transform: translateY(-2px);
+      opacity: 0.9;
+    }
+
+    a.display {
+      background: linear-gradient(135deg, #b21f1f, #fdbb2d);
+      flex: 1;
+      text-align: center;
+    }
+
+    a.admin {
+      background: #1a2a6c;
+      flex: 1;
+      text-align: center;
+    }
+
+    a.judge {
+      background: #2a3f8c;
+      min-width: 130px;
+      text-align: center;
+    }
+
+    .note {
+      color: #889;
+      font-size: 13px;
+      margin-top: 6px;
+    }
   </style>
 </head>
+
 <body>
   <header>
-    <h1>審査得点発表システム</h1>
+    <a href="/" style="color: #fff; text-decoration: none; display: inline-block;">
+      <h1 style="font-size: 32px; margin: 0;"><span style="color: #ffd54a;">📱 事前審査app</span> 得点発表システム</h1>
+    </a>
     <p>下のメニューから各画面を開いてください</p>
   </header>
   <main>
     <div class="group">
       <h2>メイン発表画面（会場スクリーン用）</h2>
       <div class="links">
-        <a class="tile display" href="display.html">メイン発表画面を開く</a>
+        <a class="tile display" href="/display">メイン発表画面を開く</a>
       </div>
     </div>
 
     <div class="group">
       <h2>管理者・進行画面</h2>
       <div class="links">
-        <a class="tile admin" href="admin.html">管理者画面を開く</a>
+        <a class="tile admin" href="/admin">管理者画面を開く</a>
       </div>
     </div>
 
@@ -103,11 +160,12 @@
       ids.forEach((id) => {
         const a = document.createElement('a');
         a.className = 'tile judge';
-        a.href = 'judge.html?id=' + id;
+        a.href = '/judge?id=' + id;
         a.textContent = judges[id].name;
         judgeLinks.appendChild(a);
       });
     });
   </script>
 </body>
+
 </html>
