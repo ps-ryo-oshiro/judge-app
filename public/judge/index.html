@@ -356,8 +356,8 @@
       const ids = byOrder(teams);
       const noMap = teamNoMap();
       if (ids.length === 0) {
-        teamGridEl.innerHTML = '<p style="color:#999; text-align:center; padding: 20px 0;">アプリが登録されていません。</p>';
-        gridProgress.textContent = '0 / 0 アプリ 採点済み';
+        teamGridEl.innerHTML = '<p style="color:#666; text-align:center; padding: 24px 0; font-size:15px;">⏳ データを読み込んでいます...</p>';
+        gridProgress.textContent = '-- / -- アプリ 採点済み';
         return;
       }
       ids.forEach((teamId) => {
@@ -480,31 +480,34 @@
 
     // ---------- 起動時のルーティング ----------
     function route() {
-      if (Object.keys(judges).length === 0) return; // 審査員リスト待ち
+      const currentUrlId = new URLSearchParams(window.location.search).get('id') || localStorage.getItem(JUDGE_KEY);
 
-      const currentUrlId = new URLSearchParams(window.location.search).get('id');
-      if (currentUrlId && judges[currentUrlId]) {
+      if (currentUrlId) {
         judgeId = currentUrlId;
         localStorage.setItem(JUDGE_KEY, judgeId);
-      }
 
-      if (!judgeId || !judges[judgeId]) {
-        localStorage.removeItem(JUDGE_KEY);
-        judgeId = null;
-        judgeLabelEl.textContent = '審査員 --';
-        showScreen('judge');
-        statusBar.textContent = '専用アクセスURLから開いてください';
+        if (judges[judgeId]) {
+          judgeLabelEl.textContent = judges[judgeId].name + ' 様';
+        } else {
+          judgeLabelEl.textContent = '審査員（読み込み中...）';
+        }
+
+        recomputeMyScores();
+        showScreen('grid');
+        renderGrid();
         return;
       }
 
-      judgeLabelEl.textContent = judges[judgeId].name + ' 様';
-      recomputeMyScores();
-      if (!scoreScreen.classList.contains('active')) {
-        showScreen('grid');
-        renderGrid();
-      }
-      statusBar.textContent = '';
+      // IDがない場合
+      localStorage.removeItem(JUDGE_KEY);
+      judgeId = null;
+      judgeLabelEl.textContent = '審査員 --';
+      showScreen('judge');
+      statusBar.textContent = '専用アクセスURLから開いてください';
     }
+
+    // 初回表示（Firebase通信を待たずに即時画面描画）
+    route();
 
     // ---------- Firebase 監視 ----------
     onValue(ref(db, 'config/judges'), (snap) => {
@@ -522,8 +525,6 @@
       recomputeMyScores();
       if (gridScreen.classList.contains('active')) renderGrid();
     });
-
-    showScreen('judge');
   </script>
 </body>
 </html>
