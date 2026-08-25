@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理者画面</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      margin: 0;
+      background: #f0f2f5;
+      color: #222;
+    }
+
+    header {
+      background: #1a2a6c;
+      color: #fff;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .brand-logo {
+      color: #ffd54a;
+      text-decoration: none;
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+
+    .brand-logo:hover {
+      opacity: 0.85;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .section h2 {
+      margin: 0 0 14px;
+      font-size: 17px;
+      color: #1a2a6c;
+    }
+
+    .team-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .team-buttons button {
+      padding: 10px 14px;
+      font-size: 15px;
+      border: 2px solid #1a2a6c;
+      background: #fff;
+      color: #1a2a6c;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .team-buttons button.active {
+      background: #1a2a6c;
+      color: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 8px 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background: #eef1fb;
+    }
+
+    .status-wait {
+      color: #b21f1f;
+      font-weight: bold;
+    }
+
+    .status-done {
+      color: #1a7a1a;
+      font-weight: bold;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button.danger {
+      padding: 10px 16px;
+      background: #b21f1f;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .active-team-label {
+      font-size: 18px;
+      font-weight: bold;
+      color: #b21f1f;
+    }
+
+    .rank-complete {
+      color: #1a7a1a;
+      font-weight: bold;
+    }
+
+    .rank-incomplete {
+      color: #999;
+    }
+
+    tr.rank-1 td {
+      background: #fff7d6;
+      font-weight: bold;
+    }
+
+    tr.rank-top12 td {
+      background: #eaf7ea;
+    }
+
+    .manage-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .manage-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #f6f7fb;
+      border-radius: 6px;
+    }
+
+    .manage-item span {
+      font-size: 15px;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .add-row input {
+      flex: 1;
+      padding: 8px 10px;
+      font-size: 15px;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+    }
+
+    .add-btn {
+      padding: 8px 16px;
+      background: #1a2a6c;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .remove-btn {
+      padding: 6px 12px;
+      background: #b21f1f;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .empty-note {
+      color: #999;
+      font-size: 14px;
+    }
+
+    .cell-done {
+      background: #eaf7ea;
+      color: #1a7a1a;
+      font-weight: bold;
+    }
+
+    .cell-pending {
+      background: #ffeef0;
+      color: #b21f1f;
+      font-weight: bold;
+    }
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <a href="/" class="brand-logo">📱 事前審査app</a>
+    <h1>管理者・進行画面</h1>
+  </header>
+  <main>
+    <div class="section">
+      <h2>1. モニタリング対象アプリ（現在: <span class="active-team-label" id="activeTeamLabel">---</span>）</h2>
+      <div class="team-buttons" id="teamButtons"></div>
+    </div>
+
+    <div class="section">
+      <h2>2. 参加アプリ管理</h2>
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <p style="margin: 0; font-size: 15px; color: #444;">
+          登録済みアプリ数: <strong id="teamCountLabel" style="font-size: 18px; color: #1a2a6c;">0</strong> 件
+        </p>
+        <a href="/admin/teams" class="add-btn" style="text-decoration: none; display: inline-block;">アプリ一覧の追加・管理ページを開く →</a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>3. 審査員管理</h2>
+      <div class="manage-list" id="judgeManageList"></div>
+      <div class="add-row">
+        <input type="text" id="newJudgeName" placeholder="審査員名を入力" />
+        <button class="add-btn" id="addJudgeBtn">追加</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>4. 進行状況モニタリング（対象: <span id="monitorTeam">---</span>）</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>審査員</th>
+            <th>状態</th>
+            <th>課題</th>
+            <th>ターゲット</th>
+            <th>着眼点</th>
+            <th>形</th>
+            <th>伝達</th>
+            <th>小計(15)</th>
+            <th>コメント</th>
+          </tr>
+        </thead>
+        <tbody id="monitorBody"></tbody>
+        <tfoot>
+          <tr>
+            <th colspan="7">総合計</th>
+            <th id="monitorTotal">0</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>5. 操作</h2>
+      <div class="controls">
+        <button class="danger" id="clearBtn">現在のアプリの得点をクリア</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>6. 総合順位表（ランキング）<span style="font-size:13px;font-weight:normal;color:#1a7a1a;">　上位12アプリ＝選抜（緑）</span></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>順位</th>
+            <th>アプリ</th>
+            <th>合計点(<span id="rankMax">0</span>)</th>
+            <th>入力状況</th>
+            <th>ステータス</th>
+          </tr>
+        </thead>
+        <tbody id="rankingBody"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>7. 審査員×アプリ 採点進捗マトリックス（未採点状況把握）</h2>
+      <div class="filter-row">
+        <label>
+          <input type="checkbox" id="showPendingOnly" /> 未採点があるアプリのみ表示
+        </label>
+      </div>
+      <div style="overflow-x: auto;">
+        <table id="matrixTable">
+          <thead id="matrixHead"></thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    // ===== Firebase 初期化 =====
+    // ▼▼▼ ここを自分のプロジェクトの設定値に差し替えてください ▼▼▼
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update, push, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDvuwfX7132v4NFfqzCL25K8tVbspUeA6E",
+      authDomain: "judge-app-f96e4.firebaseapp.com",
+      databaseURL: "https://judge-app-f96e4-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "judge-app-f96e4",
+      storageBucket: "judge-app-f96e4.firebasestorage.app",
+      messagingSenderId: "286536297446",
+      appId: "1:286536297446:web:e2158c841726af21d34427",
+      measurementId: "G-C3GB3GET6L"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    // ▲▲▲ ここまで差し替え対象 ▲▲▲
+
+    const teamButtonsEl = document.getElementById('teamButtons');
+    const teamCountLabel = document.getElementById('teamCountLabel');
+    const judgeManageList = document.getElementById('judgeManageList');
+    const activeTeamLabel = document.getElementById('activeTeamLabel');
+    const monitorTeam = document.getElementById('monitorTeam');
+    const monitorBody = document.getElementById('monitorBody');
+    const monitorTotal = document.getElementById('monitorTotal');
+    const rankingBody = document.getElementById('rankingBody');
+    const rankMax = document.getElementById('rankMax');
+
+    const MAX_PER_JUDGE = 15;
+
+    let teams = {};   // { teamId: { name, order } }
+    let judges = {};  // { judgeId: { name, order } }
+    let activeTeam = null; // teamId
+    let allScores = {};    // { teamId: { judgeId: {...} } }
+
+    const byOrder = (obj) =>
+      Object.keys(obj).sort((a, b) => (obj[a].order || 0) - (obj[b].order || 0));
+    const teamIds = () => byOrder(teams);
+    const judgeIds = () => byOrder(judges);
+    const judgeCount = () => judgeIds().length;
+
+    const teamNoMap = () => {
+      const map = {};
+      teamIds().forEach((id, i) => { map[id] = (teams[id].no != null) ? teams[id].no : (i + 1); });
+      return map;
+    };
+    const teamLabel = (teamId) =>
+      (teamId && teams[teamId]) ? ('No.' + teamNoMap()[teamId] + ' ' + teams[teamId].name) : '---';
+
+    function getTeamTotal(teamId) {
+      const s = allScores[teamId] || {};
+      return judgeIds().reduce((sum, jid) => sum + (s[jid] ? s[jid].total : 0), 0);
+    }
+    function getSubmittedCount(teamId) {
+      const s = allScores[teamId] || {};
+      return judgeIds().filter((jid) => s[jid]).length;
+    }
+
+    // 有効な対象チームが無ければ先頭チームを選択
+    function ensureActiveTeam() {
+      const ids = teamIds();
+      if ((!activeTeam || !teams[activeTeam]) && ids.length > 0) {
+        set(ref(db, 'activeTeam'), ids[0]);
+      }
+    }
+
+    // ----- チーム切替ボタン -----
+    function renderTeamSwitcher() {
+      teamButtonsEl.innerHTML = '';
+      const ids = teamIds();
+      if (ids.length === 0) {
+        teamButtonsEl.innerHTML = '<span class="empty-note">アプリがありません。専用管理ページで追加してください。</span>';
+        return;
+      }
+      ids.forEach((teamId) => {
+        const btn = document.createElement('button');
+        btn.textContent = teamLabel(teamId);
+        if (teamId === activeTeam) btn.classList.add('active');
+        btn.addEventListener('click', () => set(ref(db, 'activeTeam'), teamId));
+        teamButtonsEl.appendChild(btn);
+      });
+    }
+
+    // ----- アプリ数表示 -----
+    function renderTeamManager() {
+      if (teamCountLabel) {
+        teamCountLabel.textContent = teamIds().length;
+      }
+    }
+
+    // ----- 審査員管理 -----
+    function renderJudgeManager() {
+      judgeManageList.innerHTML = '';
+      const ids = judgeIds();
+      if (ids.length === 0) {
+        judgeManageList.innerHTML = '<span class="empty-note">登録された審査員はいません。</span>';
+        return;
+      }
+      ids.forEach((jid) => {
+        const row = document.createElement('div');
+        row.className = 'manage-item';
+        const label = document.createElement('span');
+        label.textContent = judges[jid].name;
+
+        const actionBox = document.createElement('div');
+        actionBox.style.display = 'flex';
+        actionBox.style.gap = '8px';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'add-btn';
+        editBtn.style.fontSize = '12px';
+        editBtn.style.padding = '6px 12px';
+        editBtn.style.background = '#1a2a6c';
+        editBtn.textContent = '編集';
+        editBtn.addEventListener('click', () => editJudge(jid));
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'remove-btn';
+        delBtn.textContent = '削除';
+        delBtn.addEventListener('click', () => removeJudge(jid));
+
+        actionBox.appendChild(editBtn);
+        actionBox.appendChild(delBtn);
+
+        row.appendChild(label);
+        row.appendChild(actionBox);
+        judgeManageList.appendChild(row);
+      });
+    }
+
+    function addJudge() {
+      const input = document.getElementById('newJudgeName');
+      const name = input.value.trim();
+      if (!name) return;
+      push(ref(db, 'config/judges'), { name, order: Date.now() });
+      input.value = '';
+    }
+
+    function editJudge(jid) {
+      const currentName = judges[jid].name;
+      const newName = prompt('審査員名を変更してください:', currentName);
+      if (newName !== null) {
+        const trimmed = newName.trim();
+        if (trimmed && trimmed !== currentName) {
+          update(ref(db, 'config/judges/' + jid), { name: trimmed });
+        }
+      }
+    }
+
+    function removeJudge(jid) {
+      if (!confirm('審査員「' + judges[jid].name + '」を削除しますか？（得点も削除されます）')) return;
+      remove(ref(db, 'config/judges/' + jid));
+      teamIds().forEach((teamId) => remove(ref(db, `scores/${teamId}/${jid}`)));
+    }
+
+    document.getElementById('addJudgeBtn').addEventListener('click', addJudge);
+    document.getElementById('newJudgeName').addEventListener('keydown', (e) => { if (e.key === 'Enter') addJudge(); });
+
+    // ----- モニタリング -----
+    function renderMonitor() {
+      const teamName = teamLabel(activeTeam);
+      activeTeamLabel.textContent = teamName;
+      monitorTeam.textContent = teamName;
+      const s = (activeTeam && allScores[activeTeam]) || {};
+      monitorBody.innerHTML = '';
+      const ids = judgeIds();
+      if (ids.length === 0) {
+        monitorBody.innerHTML = '<tr><td colspan="9" class="empty-note">審査員が登録されていません。</td></tr>';
+        monitorTotal.textContent = '0';
+        return;
+      }
+      ids.forEach((jid) => {
+        const score = s[jid];
+        const submitted = !!score;
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + judges[jid].name + '</td>' +
+          '<td class="' + (submitted ? 'status-done' : 'status-wait') + '">' +
+          (submitted ? '送信完了' : '未送信') + '</td>' +
+          '<td>' + (score ? score.c1 : '-') + '</td>' +
+          '<td>' + (score ? score.c2 : '-') + '</td>' +
+          '<td>' + (score ? score.c3 : '-') + '</td>' +
+          '<td>' + (score ? score.c4 : '-') + '</td>' +
+          '<td>' + (score ? score.c5 : '-') + '</td>' +
+          '<td>' + (score ? score.total : '-') + '</td>' +
+          '<td style="text-align:left;">' + (score && score.comment ? score.comment : '-') + '</td>';
+        monitorBody.appendChild(tr);
+      });
+      monitorTotal.textContent = getTeamTotal(activeTeam);
+    }
+
+    // ----- ランキング -----
+    function renderRanking() {
+      const total = judgeCount();
+      rankMax.textContent = total * MAX_PER_JUDGE;
+      const noMap = teamNoMap();
+      const rows = teamIds().map((teamId) => ({
+        name: 'No.' + noMap[teamId] + ' ' + teams[teamId].name,
+        total: getTeamTotal(teamId),
+        count: getSubmittedCount(teamId),
+        complete: total > 0 && getSubmittedCount(teamId) === total
+      })).sort((a, b) => b.total - a.total);
+
+      rankingBody.innerHTML = '';
+      rows.forEach((row, index) => {
+        const rank = index + 1;
+        const tr = document.createElement('tr');
+        if (rank === 1) tr.classList.add('rank-1');
+        if (rank > 1 && rank <= 12) tr.classList.add('rank-top12');
+        tr.innerHTML =
+          '<td>' + rank + '</td>' +
+          '<td>' + row.name + '</td>' +
+          '<td>' + row.total + '</td>' +
+          '<td>' + row.count + ' / ' + total + '</td>' +
+          '<td class="' + (row.complete ? 'rank-complete' : 'rank-incomplete') + '">' +
+          (row.complete ? '入力完了' : '入力中') + '</td>';
+        rankingBody.appendChild(tr);
+      });
+    }
+
+    // ----- 7. 採点進捗マトリックス -----
+    const showPendingOnly = document.getElementById('showPendingOnly');
+    showPendingOnly.addEventListener('change', renderMatrix);
+
+    function renderMatrix() {
+      const matrixHead = document.getElementById('matrixHead');
+      const matrixBody = document.getElementById('matrixBody');
+      const tIds = teamIds();
+      const jIds = judgeIds();
+      const noMap = teamNoMap();
+      const pendingOnly = showPendingOnly.checked;
+
+      let headHtml = '<tr><th>アプリ / 審査員</th>';
+      jIds.forEach(jid => {
+        headHtml += `<th>${judges[jid].name}</th>`;
+      });
+      headHtml += '<th>未採点数</th></tr>';
+      matrixHead.innerHTML = headHtml;
+
+      matrixBody.innerHTML = '';
+      if (tIds.length === 0 || jIds.length === 0) {
+        matrixBody.innerHTML = `<tr><td colspan="${jIds.length + 2}" class="empty-note">アプリまたは審査員が登録されていません。</td></tr>`;
+        return;
+      }
+
+      tIds.forEach(teamId => {
+        const teamScores = allScores[teamId] || {};
+        let pendingCount = 0;
+        let cellsHtml = '';
+
+        jIds.forEach(jid => {
+          const sc = teamScores[jid];
+          if (sc && typeof sc.total === 'number') {
+            cellsHtml += `<td class="cell-done">✓ ${sc.total}点</td>`;
+          } else {
+            pendingCount++;
+            cellsHtml += `<td class="cell-pending">未採点</td>`;
+          }
+        });
+
+        if (pendingOnly && pendingCount === 0) {
+          return;
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td><strong>No.${noMap[teamId]} ${teams[teamId].name}</strong></td>` +
+          cellsHtml +
+          `<td style="font-weight:bold; color:${pendingCount > 0 ? '#b21f1f' : '#1a7a1a'}">${pendingCount} 名</td>`;
+        matrixBody.appendChild(tr);
+      });
+    }
+
+    function renderAll() {
+      ensureActiveTeam();
+      renderTeamSwitcher();
+      renderTeamManager();
+      renderJudgeManager();
+      renderMonitor();
+      renderRanking();
+      renderMatrix();
+    }
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if (!activeTeam || !teams[activeTeam]) return;
+      if (confirm(teams[activeTeam].name + ' の得点をクリアしますか？')) {
+        set(ref(db, `scores/${activeTeam}`), null);
+      }
+    });
+
+    // 未初期化のときだけ既定のチーム・審査員を投入
+    async function seedIfNeeded() {
+      const snap = await get(ref(db, 'config/initialized'));
+      if (snap.exists()) return;
+      const base = Date.now();
+      const defaultTeams = ['Team A', 'Team B', 'Team C', 'Team D', 'Team E'];
+      const defaultJudges = ['審査員1', '審査員2', '審査員3', '審査員4', '審査員5'];
+      defaultTeams.forEach((name, i) => push(ref(db, 'config/teams'), { name, order: base + i, no: i + 1 }));
+      defaultJudges.forEach((name, i) => push(ref(db, 'config/judges'), { name, order: base + i }));
+      await set(ref(db, 'config/initialized'), true);
+    }
+    seedIfNeeded();
+
+    // ----- 監視 -----
+    onValue(ref(db, 'config/teams'), (snap) => {
+      teams = snap.val() || {};
+      renderAll();
+    });
+    onValue(ref(db, 'config/judges'), (snap) => {
+      judges = snap.val() || {};
+      renderAll();
+    });
+    onValue(ref(db, 'activeTeam'), (snap) => {
+      activeTeam = snap.val() || null;
+      ensureActiveTeam();
+      renderTeamSwitcher();
+      renderMonitor();
+    });
+    // 得点更新では管理UIを再構築せず、集計のみ更新
+    onValue(ref(db, 'scores'), (snap) => {
+      allScores = snap.val() || {};
+      renderMonitor();
+      renderRanking();
+      renderMatrix();
+    });
+  </script>
+</body>
+
+</html>
