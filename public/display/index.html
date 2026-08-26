@@ -419,12 +419,11 @@
 
     function averageScores(teamId) {
       const teamScores = allScores[teamId] || {};
-      const list = Object.values(teamScores);
-      const n = list.length || 1;
-      return CRITERIA.map(({ key }) => {
-        const sum = list.reduce((a, s) => a + (Number(s[key]) || 0), 0);
-        return sum / n;
-      });
+      const jids = byOrder(judges).filter((jid) => teamScores[jid]);
+      const n = jids.length || 1;
+      return CRITERIA.map(({ key }) =>
+        jids.reduce((a, jid) => a + (Number(teamScores[jid][key]) || 0), 0) / n
+      );
     }
 
     let radarChart = null;
@@ -453,7 +452,11 @@
               ticks: { stepSize: 1, color: '#ccc', backdropColor: 'transparent' },
               grid: { color: 'rgba(255, 255, 255, 0.2)' },
               angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
-              pointLabels: { color: '#fff', font: { size: 14 } }
+              pointLabels: {
+                color: '#fff',
+                font: { size: 14 },
+                callback: (label, index) => [label, `(${data[index].toFixed(1)}点)`]
+              }
             }
           },
           plugins: { legend: { labels: { color: '#fff' } } }
