@@ -329,6 +329,26 @@
         </table>
       </div>
     </div>
+
+    <div class="section">
+      <h2>8. データインポート（外部評価システムのJSON）</h2>
+      <p style="margin: 0 0 12px; font-size: 14px; color: #444;">
+        外部システムでエクスポートしたJSONを、<strong>no（アプリ番号）で照合</strong>して得点・コメントを反映します。
+      </p>
+      <div class="controls" style="align-items: flex-end;">
+        <div>
+          <label style="display:block; font-size:14px; margin-bottom:6px;">得点を保存する審査員</label>
+          <select id="importJudgeSelect" style="padding:8px 10px; font-size:15px; border:1px solid #bbb; border-radius:6px;"></select>
+        </div>
+        <div>
+          <label style="display:block; font-size:14px; margin-bottom:6px;">JSONファイル</label>
+          <input type="file" id="importFile" accept=".json,application/json" />
+        </div>
+        <button class="add-btn" id="importBtn">インポート実行</button>
+      </div>
+      <p id="importResult" style="margin-top:12px; font-size:14px; color:#444; white-space:pre-line;"></p>
+      <div id="importDetail" style="margin-top:12px;"></div>
+    </div>
   </main>
 
   <script type="module">
@@ -610,6 +630,7 @@
       renderTeamSwitcher();
       renderTeamManager();
       renderJudgeManager();
+      renderImportJudgeOptions();
       renderMonitor();
       renderRanking();
       renderMatrix();
@@ -634,6 +655,174 @@
       await set(ref(db, 'config/initialized'), true);
     }
     seedIfNeeded();
+
+    // ===== JSONインポート（no照合） =====
+    const importFileEl = document.getElementById('importFile');
+    const importBtn = document.getElementById('importBtn');
+    const importResultEl = document.getElementById('importResult');
+    const importDetailEl = document.getElementById('importDetail');
+    const importJudgeSelect = document.getElementById('importJudgeSelect');
+
+    // 1〜3のみ有効な得点として扱う
+    function toScore(v) {
+      const n = parseInt(v, 10);
+      return (n >= 1 && n <= 3) ? n : null;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // 審査員プルダウンを更新（選択状態は維持）
+    function renderImportJudgeOptions() {
+      const prev = importJudgeSelect.value;
+      const ids = judgeIds();
+      importJudgeSelect.innerHTML = ids.length
+        ? ids.map((jid) => `<option value="${jid}">${escapeHtml(judges[jid].name)}</option>`).join('')
+        : '<option value="">（審査員が未登録です）</option>';
+      if (ids.includes(prev)) importJudgeSelect.value = prev;
+    }
+
+    // 既存アプリを「no → teamId」で索引化
+    function buildNoIndex() {
+      const idx = {};
+      Object.keys(teams).forEach((teamId) => {
+        const no = teams[teamId].no;
+        if (no != null) idx[no] = teamId;
+      });
+      return idx;
+    }
+
+    async function importFromList(list, judgeId) {
+      const noIndex = buildNoIndex();
+      const base = Date.now();
+      const details = [];
+      let matched = 0, created = 0, scored = 0, skipped = 0;
+
+      for (let i = 0; i < list.length; i++) {
+        const e = list[i] || {};
+        const no = Number(e['no']);
+        const name = String(e['作品名'] || '').trim();
+
+        // no が無ければ照合不能なのでスキップ
+        if (!Number.isFinite(no)) {
+          skipped++;
+          details.push({ no: e['no'], jsonName: name, appName: '', status: 'skipped', note: 'no が不正' });
+          continue;
+        }
+
+        let teamId = noIndex[no];
+        let status;
+
+        if (teamId) {
+          matched++;
+          status = 'matched';
+        } else {
+          if (!name) {
+            skipped++;
+            details.push({ no, jsonName: name, appName: '', status: 'skipped', note: '作品名なし・未登録' });
+            continue;
+          }
+          const teamRef = push(ref(db, 'config/teams'));
+          const teamData = { name, order: base + i, no };
+          const dept = String(e['部門'] || '').trim();
+          if (dept) teamData.department = dept;
+          await set(teamRef, teamData);
+          teamId = teamRef.key;
+          noIndex[no] = teamId;
+          created++;
+          status = 'created';
+        }
+
+        // 得点・コメントを保存（5項目すべて1〜3のときのみ）
+        let didScore = false;
+        if (judgeId) {
+          const c1 = toScore(e['課題の明確さ']);
+          const c2 = toScore(e['ターゲットの具体性']);
+          const c3 = toScore(e['着眼のユニークさ']);
+          const c4 = toScore(e['形の有無']);
+          const c5 = toScore(e['伝わりやすさ']);
+          if ([c1, c2, c3, c4, c5].every((v) => v !== null)) {
+            await set(ref(db, `scores/${teamId}/${judgeId}`), {
+              c1, c2, c3, c4, c5,
+              total: c1 + c2 + c3 + c4 + c5,
+              comment: String(e['メモ'] || '').trim(),
+              nominate: String(e['ノミネート候補'] || '').trim()
+            });
+            scored++;
+            didScore = true;
+          }
+        }
+
+        details.push({
+          no,
+          jsonName: name,
+          appName: teams[teamId] ? teams[teamId].name : name,
+          status,
+          note: didScore ? '得点反映' : '得点なし'
+        });
+      }
+      return { matched, created, scored, skipped, details };
+    }
+
+    function renderImportDetail(details) {
+      if (!details.length) { importDetailEl.innerHTML = ''; return; }
+      const statusLabel = { matched: '既存に一致', created: '新規作成', skipped: 'スキップ' };
+      const statusColor = { matched: '#1a7a1a', created: '#1a2a6c', skipped: '#b21f1f' };
+      let html = '<table><thead><tr>' +
+        '<th>no</th><th>JSONの作品名</th><th>judge-appのアプリ名</th><th>照合結果</th><th>備考</th>' +
+        '</tr></thead><tbody>';
+      details.forEach((d) => {
+        html += '<tr>' +
+          `<td>${escapeHtml(d.no)}</td>` +
+          `<td style="text-align:left;">${escapeHtml(d.jsonName)}</td>` +
+          `<td style="text-align:left;">${escapeHtml(d.appName)}</td>` +
+          `<td style="color:${statusColor[d.status]}; font-weight:bold;">${statusLabel[d.status]}</td>` +
+          `<td>${escapeHtml(d.note)}</td>` +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      importDetailEl.innerHTML = html;
+    }
+
+    importBtn.addEventListener('click', () => {
+      const file = importFileEl.files && importFileEl.files[0];
+      if (!file) { importResultEl.textContent = 'JSONファイルを選択してください。'; return; }
+
+      const judgeId = importJudgeSelect.value;
+      if (!judgeId) { importResultEl.textContent = '得点を保存する審査員を選択してください。'; return; }
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        let parsed;
+        try {
+          parsed = JSON.parse(reader.result);
+        } catch (err) {
+          importResultEl.textContent = 'JSONの解析に失敗しました: ' + err.message;
+          importDetailEl.innerHTML = '';
+          return;
+        }
+        const list = Array.isArray(parsed) ? parsed : [parsed];
+
+        importBtn.disabled = true;
+        importResultEl.textContent = 'インポート中...';
+        importDetailEl.innerHTML = '';
+        try {
+          const r = await importFromList(list, judgeId);
+          importResultEl.textContent =
+            `完了: 既存アプリに一致 ${r.matched} 件 / 新規作成 ${r.created} 件 / ` +
+            `得点保存 ${r.scored} 件 / スキップ ${r.skipped} 件`;
+          renderImportDetail(r.details);
+        } catch (err) {
+          importResultEl.textContent = 'インポート中にエラー: ' + err.message;
+        } finally {
+          importBtn.disabled = false;
+          importFileEl.value = '';
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    });
 
     // ----- 監視 -----
     onValue(ref(db, 'config/teams'), (snap) => {
