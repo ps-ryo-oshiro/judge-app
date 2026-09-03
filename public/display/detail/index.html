@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>審査結果詳細</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #0d1030 0%, #1a1c4b 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+    header {
+      text-align: center;
+      padding: 20px 20px 15px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .brand-logo {
+      color: #ffd54a;
+      text-decoration: none;
+      font-size: 18px;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 8px;
+      transition: opacity 0.2s;
+    }
+    .brand-logo:hover { opacity: 0.85; }
+    header h1 {
+      font-size: 32px;
+      margin: 0;
+      letter-spacing: 2px;
+      background: linear-gradient(90deg, #ffd700, #fff, #ffd700);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+    }
+    main {
+      max-width: 960px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .back-link:hover { background: rgba(255, 255, 255, 0.2); }
+    .detail-card {
+      padding: 0;
+    }
+    .detail-card h2 {
+      margin: 0 0 12px;
+      font-size: 26px;
+      color: #ffd54a;
+    }
+    .detail-dept {
+      display: inline-block;
+      margin-bottom: 20px;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: rgba(255, 213, 74, 0.15);
+      border: 1px solid rgba(255, 213, 74, 0.5);
+      color: #ffd54a;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .detail-dept:empty { display: none; }
+    .detail-total {
+      color: #fff;
+      font-weight: normal;
+      margin-bottom: 14px;
+      font-size: 16px;
+    }
+    .detail-total strong { color: #ffd54a; font-size: 30px; margin: 0 4px; }
+    .detail-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .radar-wrap { max-width: 420px; margin: 0 auto; width: 100%; }
+    .comment-section { max-height: 70vh; overflow-y: auto; }
+    .comment-section h3 { color: #ffd54a; margin-top: 0; font-size: 18px; }
+    .comment-item {
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+    }
+    .comment-judge { color: #ffd54a; font-weight: bold; margin-bottom: 6px; }
+    .comment-body { color: #dfe6ec; line-height: 1.5; white-space: pre-wrap; }
+    .empty-msg {
+      text-align: center;
+      padding: 40px;
+      font-size: 20px;
+      color: #889;
+    }
+    @media (max-width: 700px) {
+      .detail-body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <a href="/" class="brand-logo">📱 事前審査app</a>
+    </div>
+    <h1>🏆 審査結果詳細</h1>
+  </header>
+
+  <main>
+    <a href="/display" class="back-link">← 一覧に戻る</a>
+    <div class="detail-card" id="detailCard">
+      <h2 id="detailTitle">読み込み中...</h2>
+      <div class="detail-dept" id="detailDept"></div>
+      <div class="detail-body">
+        <!-- <div class="radar-wrap"><canvas id="radarCanvas"></canvas></div> -->
+        <div class="comment-section">
+          <!-- <div class="detail-total" id="detailTotal"></div> -->
+          <h3>審査員コメント</h3>
+          <div id="commentList"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDvuwfX7132v4NFfqzCL25K8tVbspUeA6E",
+      authDomain: "judge-app-f96e4.firebaseapp.com",
+      databaseURL: "https://judge-app-f96e4-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "judge-app-f96e4",
+      storageBucket: "judge-app-f96e4.firebasestorage.app",
+      messagingSenderId: "286536297446",
+      appId: "1:286536297446:web:e2158c841726af21d34427",
+      measurementId: "G-C3GB3GET6L"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const CRITERIA = [
+      { key: 'c1', label: '課題の明確さ' },
+      { key: 'c2', label: 'ターゲットの具体性' },
+      { key: 'c3', label: '着眼点のユニークさ' },
+      { key: 'c4', label: '形の有無' },
+      { key: 'c5', label: '伝わりやすさ' },
+    ];
+
+    const teamId = new URLSearchParams(location.search).get('team');
+
+    const detailTitle = document.getElementById('detailTitle');
+    const detailDept = document.getElementById('detailDept');
+    // const detailTotal = document.getElementById('detailTotal');
+    const commentList = document.getElementById('commentList');
+
+    let teams = {};
+    let judges = {};
+    let allScores = {};
+
+    const byOrder = (obj) =>
+      Object.keys(obj).sort((a, b) => (obj[a].order || 0) - (obj[b].order || 0));
+
+    function teamNoMap() {
+      const map = {};
+      byOrder(teams).forEach((id, i) => {
+        map[id] = (teams[id].no != null) ? teams[id].no : (i + 1);
+      });
+      return map;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function averageScores(id) {
+      const teamScores = allScores[id] || {};
+      const jids = byOrder(judges).filter((jid) => teamScores[jid]);
+      const n = jids.length || 1;
+      return CRITERIA.map(({ key }) =>
+        jids.reduce((a, jid) => a + (Number(teamScores[jid][key]) || 0), 0) / n
+      );
+    }
+
+    let radarChart = null;
+    function drawRadar(id) {
+      const data = averageScores(id);
+      if (radarChart) radarChart.destroy();
+      radarChart = new Chart(document.getElementById('radarCanvas'), {
+        type: 'radar',
+        data: {
+          labels: CRITERIA.map((c) => c.label),
+          datasets: [{
+            label: '平均点',
+            data,
+            backgroundColor: 'rgba(255, 213, 74, 0.25)',
+            borderColor: '#ffd54a',
+            borderWidth: 2,
+            pointBackgroundColor: '#ffd54a',
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            r: {
+              min: 0,
+              max: 3,
+              ticks: { stepSize: 1, color: '#ccc', backdropColor: 'transparent' },
+              grid: { color: 'rgba(255, 255, 255, 0.2)' },
+              angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+              pointLabels: {
+                color: '#fff',
+                font: { size: 14 },
+                callback: (label, index) => [label, `(${data[index].toFixed(1)}点)`]
+              }
+            }
+          },
+          plugins: { legend: { labels: { color: '#fff' } } }
+        }
+      });
+    }
+
+    function renderComments(id) {
+      const teamScores = allScores[id] || {};
+      const html = byOrder(judges).map((jid) => {
+        const s = teamScores[jid];
+        if (!s) return '';
+        const comment = (s.comment && s.comment.trim()) || '（コメントなし）';
+        return `
+          <div class="comment-item">
+            <div class="comment-judge">${escapeHtml(judges[jid].name)}</div>
+            <div class="comment-body">${escapeHtml(comment)}</div>
+          </div>`;
+      }).join('');
+      commentList.innerHTML = html || '<div class="empty-msg">まだ採点がありません</div>';
+    }
+
+    function teamTotal(id) {
+      const teamScores = allScores[id] || {};
+      return byOrder(judges).reduce((a, jid) => {
+        const s = teamScores[jid];
+        return a + (s && typeof s.total === 'number' ? s.total : 0);
+      }, 0);
+    }
+
+    function render() {
+      if (!teamId || !teams[teamId]) {
+        detailTitle.textContent = 'アプリが見つかりません';
+        detailDept.textContent = '';
+        // detailTotal.textContent = '';
+        commentList.innerHTML = '';
+        return;
+      }
+      const noMap = teamNoMap();
+      detailTitle.textContent = 'No.' + noMap[teamId] + ' ' + teams[teamId].name;
+      detailDept.textContent = teams[teamId].department || '';
+      document.title = teams[teamId].name + ' - 審査結果詳細';
+      // detailTotal.innerHTML = `総合点数 <strong>${teamTotal(teamId)}</strong> 点`;
+      // drawRadar(teamId);
+      renderComments(teamId);
+    }
+
+    onValue(ref(db, 'config/teams'), (snap) => {
+      teams = snap.val() || {};
+      render();
+    });
+
+    onValue(ref(db, 'config/judges'), (snap) => {
+      judges = snap.val() || {};
+      render();
+    });
+
+    onValue(ref(db, 'scores'), (snap) => {
+      allScores = snap.val() || {};
+      render();
+    });
+  </script>
+</body>
+</html>

@@ -17,6 +17,10 @@ app.get('/display', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'display', 'index.html'));
 });
 
+app.get('/display/detail', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'display', 'detail', 'index.html'));
+});
+
 app.get('/judge', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'judge', 'index.html'));
 });
