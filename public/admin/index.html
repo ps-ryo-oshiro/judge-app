@@ -349,6 +349,18 @@
       <p id="importResult" style="margin-top:12px; font-size:14px; color:#444; white-space:pre-line;"></p>
       <div id="importDetail" style="margin-top:12px;"></div>
     </div>
+
+    <div class="section">
+      <h2>9. 部門情報の反映</h2>
+      <p style="margin: 0 0 12px; font-size: 14px; color: #444;">
+        アプリの<strong>no（アプリ番号）で照合</strong>して部門（ライフ／ローカル／ワーク）を各アプリに設定します。
+      </p>
+      <p style="margin: 0 0 12px; font-size: 13px; color: #666;">
+        ライフ部門: No.1〜24 ／ ローカル部門: No.25〜39 ／ ワーク部門: No.40〜48
+      </p>
+      <button class="add-btn" id="applyDeptBtn">部門情報を反映</button>
+      <p id="deptResult" style="margin-top:12px; font-size:14px; color:#444; white-space:pre-line;"></p>
+    </div>
   </main>
 
   <script type="module">
@@ -822,6 +834,54 @@
         }
       };
       reader.readAsText(file, 'utf-8');
+    });
+
+    // ----- 部門情報の反映 -----
+    // no（アプリ番号）から部門を判定する
+    function departmentByNo(no) {
+      const n = Number(no);
+      if (!Number.isFinite(n)) return null;
+      if (n >= 1 && n <= 24) return 'ライフ部門';
+      if (n >= 25 && n <= 39) return 'ローカル部門';
+      if (n >= 40 && n <= 48) return 'ワーク部門';
+      return null;
+    }
+
+    const applyDeptBtn = document.getElementById('applyDeptBtn');
+    const deptResult = document.getElementById('deptResult');
+
+    applyDeptBtn.addEventListener('click', async () => {
+      const teamIds = Object.keys(teams);
+      if (teamIds.length === 0) {
+        deptResult.textContent = 'アプリが登録されていません。';
+        return;
+      }
+
+      applyDeptBtn.disabled = true;
+      deptResult.textContent = '反映中...';
+
+      let updated = 0, skipped = 0;
+      const skippedList = [];
+
+      for (const teamId of teamIds) {
+        const team = teams[teamId] || {};
+        const dept = departmentByNo(team.no);
+        if (!dept) {
+          skipped++;
+          skippedList.push(`No.${team.no != null ? team.no : '?'} ${team.name || ''}`);
+          continue;
+        }
+        if (team.department === dept) continue; // 変更不要
+        await update(ref(db, `config/teams/${teamId}`), { department: dept });
+        updated++;
+      }
+
+      let msg = `反映完了: ${updated}件を更新`;
+      if (skipped > 0) {
+        msg += ` / 対象外(no未設定または範囲外): ${skipped}件\n` + skippedList.join('\n');
+      }
+      deptResult.textContent = msg;
+      applyDeptBtn.disabled = false;
     });
 
     // ----- 監視 -----
