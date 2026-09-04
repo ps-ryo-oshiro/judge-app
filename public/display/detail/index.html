@@ -41,7 +41,7 @@
       text-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
     }
     main {
-      max-width: 960px;
+      max-width: 1400px;
       margin: 20px auto;
       padding: 0 20px;
     }
@@ -87,18 +87,25 @@
     .detail-total strong { color: #ffd54a; font-size: 30px; margin: 0 4px; }
     .detail-body {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 360px 1fr;
       gap: 24px;
       align-items: start;
     }
-    .radar-wrap { max-width: 420px; margin: 0 auto; width: 100%; }
-    .comment-section { max-height: 70vh; overflow-y: auto; }
+    .radar-wrap { max-width: 360px; margin: 0 auto; width: 100%; }
     .comment-section h3 { color: #ffd54a; margin-top: 0; font-size: 18px; }
+    #commentList {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
     .comment-item {
+      flex: 1 1 0;
+      min-width: 0;
       background: rgba(255, 255, 255, 0.07);
       border-radius: 8px;
       padding: 12px 16px;
       margin-bottom: 10px;
+      break-inside: avoid;
     }
     .comment-judge { color: #ffd54a; font-weight: bold; margin-bottom: 6px; }
     .comment-body { color: #dfe6ec; line-height: 1.5; white-space: pre-wrap; }
@@ -127,7 +134,7 @@
       <h2 id="detailTitle">読み込み中...</h2>
       <div class="detail-dept" id="detailDept"></div>
       <div class="detail-body">
-        <!-- <div class="radar-wrap"><canvas id="radarCanvas"></canvas></div> -->
+        <div class="radar-wrap"><canvas id="radarCanvas"></canvas></div>
         <div class="comment-section">
           <!-- <div class="detail-total" id="detailTotal"></div> -->
           <h3>審査員コメント</h3>
@@ -241,14 +248,15 @@
       const html = byOrder(judges).map((jid) => {
         const s = teamScores[jid];
         if (!s) return '';
-        const comment = (s.comment && s.comment.trim()) || '（コメントなし）';
+        const comment = (s.comment && s.comment.trim()) || '';
+        if (!comment) return '';
         return `
           <div class="comment-item">
             <div class="comment-judge">${escapeHtml(judges[jid].name)}</div>
             <div class="comment-body">${escapeHtml(comment)}</div>
           </div>`;
       }).join('');
-      commentList.innerHTML = html || '<div class="empty-msg">まだ採点がありません</div>';
+      commentList.innerHTML = html || '<div class="empty-msg">コメントはまだありません</div>';
     }
 
     function teamTotal(id) {
@@ -272,7 +280,7 @@
       detailDept.textContent = teams[teamId].department || '';
       document.title = teams[teamId].name + ' - 審査結果詳細';
       // detailTotal.innerHTML = `総合点数 <strong>${teamTotal(teamId)}</strong> 点`;
-      // drawRadar(teamId);
+      drawRadar(teamId);
       renderComments(teamId);
     }
 
