@@ -25,6 +25,23 @@ app.get('/judge', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'judge', 'index.html'));
 });
 
+// 本番審査（v2）
+app.get('/v2', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'v2', 'index.html'));
+});
+
+app.get('/v2/judge', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'v2', 'judge', 'index.html'));
+});
+
+app.get('/v2/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'v2', 'admin', 'index.html'));
+});
+
+app.get('/v2/display', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'v2', 'display', 'index.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
