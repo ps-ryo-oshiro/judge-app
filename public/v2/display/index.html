@@ -39,7 +39,20 @@
       text-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
     }
     header .subtitle { font-size: 16px; color: #aab8c2; margin-top: 8px; }
-    main { max-width: 900px; margin: 24px auto; padding: 0 20px; }
+    main { max-width: 1920px; margin: 24px auto; padding: 0 20px; }
+    .ranking-sections {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .ranking-section { min-width: 0; }
+    .section-title {
+      margin: 0 0 14px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #ffd54a;
+      color: #ffd54a;
+      font-size: 22px;
+    }
     .ranking-list { display: flex; flex-direction: column; gap: 12px; }
     .rank-card {
       display: flex; align-items: center; justify-content: space-between;
@@ -61,22 +74,35 @@
       background: linear-gradient(90deg, rgba(205, 127, 50, 0.25) 0%, rgba(205, 127, 50, 0.08) 100%);
       border: 2px solid #cd7f32;
     }
-    .rank-left { display: flex; align-items: center; gap: 18px; min-width: 0; }
+    .rank-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .rank-number {
-      font-size: 24px; font-weight: bold;
-      width: 46px; height: 46px; flex: 0 0 46px;
+      font-size: 20px; font-weight: bold;
+      width: 40px; height: 40px; flex: 0 0 40px;
       display: flex; align-items: center; justify-content: center;
       background: rgba(255, 255, 255, 0.1); border-radius: 50%;
     }
     .rank-1 .rank-number { background: #ffd700; color: #1a1c4b; }
     .rank-2 .rank-number { background: #c0c0c0; color: #1a1c4b; }
     .rank-3 .rank-number { background: #cd7f32; color: #fff; }
-    .rank-name { font-size: 20px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; }
+    .rank-name { font-size: 18px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; }
+    .rank-developer {
+      margin-top: 4px;
+      color: #aab8c2;
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .rank-score { font-size: 15px; color: #aab8c2; }
-    .rank-score strong { color: #ffd54a; font-size: 26px; margin: 0 4px; }
+    .rank-score strong { color: #ffd54a; font-size: 22px; margin: 0 4px; }
     .empty-msg { text-align: center; padding: 40px; font-size: 20px; color: #889; }
     .back-home { display: inline-block; margin-top: 18px; color: #8aa; font-size: 13px; text-decoration: none; }
     .back-home:hover { color: #ccd; }
+    @media (max-width: 1300px) {
+      .ranking-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 700px) {
+      .ranking-sections { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -86,7 +112,24 @@
     <div class="subtitle">審査員合計スコア順</div>
   </header>
   <main>
-    <div class="ranking-list" id="rankingList"></div>
+    <div class="ranking-sections">
+      <section class="ranking-section">
+        <h2 class="section-title">ライフ部門</h2>
+        <div class="ranking-list" id="lifeRankingList"></div>
+      </section>
+      <section class="ranking-section">
+        <h2 class="section-title">ワーク部門</h2>
+        <div class="ranking-list" id="workRankingList"></div>
+      </section>
+      <section class="ranking-section">
+        <h2 class="section-title">ローカル部門</h2>
+        <div class="ranking-list" id="localRankingList"></div>
+      </section>
+      <section class="ranking-section">
+        <h2 class="section-title">ALL（総合）</h2>
+        <div class="ranking-list" id="allRankingList"></div>
+      </section>
+    </div>
     <div style="text-align:center;">
       <a class="back-home" href="/v2">← メニューへ戻る</a>
     </div>
@@ -110,12 +153,31 @@
     const db = getDatabase(app);
 
     const TOP_N = 12;
-    const rankingList = document.getElementById('rankingList');
+    const lifeRankingList = document.getElementById('lifeRankingList');
+    const workRankingList = document.getElementById('workRankingList');
+    const localRankingList = document.getElementById('localRankingList');
+    const allRankingList = document.getElementById('allRankingList');
 
     let judges = {};
     let prelimTeams = {};
     let prelimScores = {};
     let v2Scores = {};
+
+    // 提出一覧の No. と開発者（個人参加時はリーダー氏名）を対応付ける。
+    const DEVELOPERS_BY_NO = {
+      1: '加藤奏良',
+      7: '山本 夢七',
+      16: '上原 善太',
+      19: '芹沢 龍貴',
+      20: '新垣美子',
+      22: 'KBC_A',
+      24: 'KBC-B',
+      33: 'FNS DEV',
+      38: 'U3A2',
+      44: '宮平 忍',
+      46: 'レキサン',
+      47: '一般社団法人 宜野湾青年会議所',
+    };
 
     const byOrder = (obj) =>
       Object.keys(obj).sort((a, b) => (obj[a].order || 0) - (obj[b].order || 0));
@@ -132,6 +194,15 @@
         map[id] = (prelimTeams[id].no != null) ? prelimTeams[id].no : (i + 1);
       });
       return map;
+    }
+
+    function departmentOf(team, no) {
+      if (team.department) return team.department;
+      const number = Number(no);
+      if (number >= 1 && number <= 24) return 'ライフ部門';
+      if (number >= 25 && number <= 39) return 'ローカル部門';
+      if (number >= 40 && number <= 48) return 'ワーク部門';
+      return '部門未設定';
     }
 
     function prelimTotal(teamId) {
@@ -162,25 +233,43 @@
       const noMap = prelimTeamNoMap();
       const rows = computeTop12().map((teamId) => ({
         name: 'No.' + noMap[teamId] + ' ' + (prelimTeams[teamId] ? prelimTeams[teamId].name : teamId),
+        developer: DEVELOPERS_BY_NO[Number(noMap[teamId])] || '',
+        department: departmentOf(prelimTeams[teamId] || {}, noMap[teamId]),
         total: teamTotal(teamId)
       })).sort((a, b) => b.total - a.total);
 
-      rankingList.innerHTML = '';
+      const sections = [
+        { list: lifeRankingList, rows: rows.filter((row) => row.department === 'ライフ部門') },
+        { list: workRankingList, rows: rows.filter((row) => row.department === 'ワーク部門') },
+        { list: localRankingList, rows: rows.filter((row) => row.department === 'ローカル部門') },
+        { list: allRankingList, rows },
+      ];
       if (rows.length === 0) {
-        rankingList.innerHTML = '<div class="empty-msg">対象アプリがありません（事前審査データ待ち）。</div>';
+        sections.forEach((section) => {
+          section.list.innerHTML = '<div class="empty-msg">対象アプリがありません</div>';
+        });
         return;
       }
-      rows.forEach((row, index) => {
-        const rank = index + 1;
-        const card = document.createElement('div');
-        card.className = 'rank-card rank-' + rank;
-        card.innerHTML =
-          '<div class="rank-left">' +
-          '<div class="rank-number">' + rank + '</div>' +
-          '<div class="rank-name">' + escapeHtml(row.name) + '</div>' +
-          '</div>' +
-          '<div class="rank-score"><strong>' + row.total.toFixed(1) + '</strong>点</div>';
-        rankingList.appendChild(card);
+      sections.forEach((section) => {
+        section.list.innerHTML = '';
+        if (section.rows.length === 0) {
+          section.list.innerHTML = '<div class="empty-msg">該当アプリなし</div>';
+          return;
+        }
+        section.rows.forEach((row, index) => {
+          const rank = index + 1;
+          const card = document.createElement('div');
+          card.className = 'rank-card rank-' + rank;
+          card.innerHTML =
+            '<div class="rank-left">' +
+            '<div class="rank-number">' + rank + '</div>' +
+            '<div><div class="rank-name">' + escapeHtml(row.name) + '</div>' +
+            (row.developer ? '<div class="rank-developer">' + escapeHtml(row.developer) + '</div>' : '') +
+            '</div>' +
+            '</div>' +
+            '<div class="rank-score"><strong>' + row.total.toFixed(1) + '</strong>点</div>';
+          section.list.appendChild(card);
+        });
       });
     }
 

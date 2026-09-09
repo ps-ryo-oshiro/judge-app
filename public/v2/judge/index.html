@@ -31,7 +31,8 @@
     .brand-logo:hover { opacity: 0.85; }
     header .judge-label { font-size: 14px; opacity: 0.85; }
     header .team-name { font-size: 30px; font-weight: bold; margin-top: 4px; }
-    main { max-width: 560px; margin: 0 auto; padding: 20px; }
+    header .department-name { font-size: 16px; font-weight: bold; color: #ffd54a; margin-top: 6px; }
+    main { max-width: 1120px; margin: 0 auto; padding: 20px; }
     .card {
       background: #fff;
       border-radius: 10px;
@@ -43,12 +44,23 @@
     .screen-title { font-size: 18px; font-weight: bold; margin: 0 0 16px; color: #1a2a6c; }
     .grid-legend { font-size: 13px; color: #555; margin-bottom: 12px; }
     .team-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
       max-height: 62vh;
       overflow-y: auto;
       padding-right: 4px;
+    }
+    .department-group { min-width: 0; }
+    .department-title {
+      margin: 0 0 8px;
+      color: #1a2a6c;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .department-list { display: flex; flex-direction: column; gap: 10px; }
+    @media (max-width: 760px) {
+      .team-list { grid-template-columns: 1fr; gap: 18px; }
     }
     .team-list-item {
       display: flex;
@@ -67,15 +79,6 @@
     }
     .team-list-item:hover { background: #f0f3ff; transform: translateY(-1px); }
     .team-list-item.done { border-color: #1a7a1a; background: #f4faf4; color: #1a7a1a; }
-    .team-list-item .rank-badge {
-      font-size: 12px;
-      font-weight: bold;
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: #eef1fb;
-      color: #1a2a6c;
-      margin-right: 10px;
-    }
     .team-list-item .status-badge {
       font-size: 13px;
       font-weight: bold;
@@ -146,6 +149,7 @@
     </div>
     <div class="judge-label" id="judgeLabel">審査員 --</div>
     <div class="team-name" id="teamName">本番審査</div>
+    <div class="department-name" id="departmentName"></div>
   </header>
   <main>
     <!-- 審査員案内画面（専用URL未設定時） -->
@@ -215,6 +219,7 @@
 
     const judgeLabelEl = document.getElementById('judgeLabel');
     const teamNameEl = document.getElementById('teamName');
+    const departmentNameEl = document.getElementById('departmentName');
     const statusBar = document.getElementById('statusBar');
 
     const judgeSelectScreen = document.getElementById('judgeSelectScreen');
@@ -254,6 +259,15 @@
 
     const byOrder = (obj) =>
       Object.keys(obj).sort((a, b) => (obj[a].order || 0) - (obj[b].order || 0));
+
+    function departmentOf(team, no) {
+      if (team.department) return team.department;
+      const number = Number(no);
+      if (number >= 1 && number <= 24) return 'ライフ部門';
+      if (number >= 25 && number <= 39) return 'ローカル部門';
+      if (number >= 40 && number <= 48) return 'ワーク部門';
+      return '部門未設定';
+    }
 
     function prelimTeamNoMap() {
       const map = {};
@@ -348,7 +362,29 @@
         gridProgress.textContent = '0 / 0 アプリ 採点済み';
         return;
       }
-      top12.forEach((teamId, i) => {
+      const departments = [
+        { name: 'ライフ部門', teamIds: [] },
+        { name: 'ワーク部門', teamIds: [] },
+        { name: 'ローカル部門', teamIds: [] },
+        { name: '部門未設定', teamIds: [] },
+      ];
+      top12.forEach((teamId) => {
+        const department = departmentOf(prelimTeams[teamId], noMap[teamId]);
+        const group = departments.find((item) => item.name === department) || departments[3];
+        group.teamIds.push(teamId);
+      });
+      departments.forEach((department) => {
+        if (department.teamIds.length === 0) return;
+        const group = document.createElement('section');
+        group.className = 'department-group';
+        const heading = document.createElement('h3');
+        heading.className = 'department-title';
+        heading.textContent = department.name;
+        const list = document.createElement('div');
+        list.className = 'department-list';
+        group.appendChild(heading);
+        group.appendChild(list);
+        department.teamIds.forEach((teamId) => {
         const btn = document.createElement('button');
         btn.className = 'team-list-item';
         const done = !!myScoreOf(teamId);
@@ -356,13 +392,9 @@
 
         const left = document.createElement('span');
         left.className = 'item-left';
-        const rank = document.createElement('span');
-        rank.className = 'rank-badge';
-        rank.textContent = (i + 1) + '位';
         const title = document.createElement('span');
         title.className = 'title';
         title.textContent = 'No.' + noMap[teamId] + ' ' + prelimTeams[teamId].name;
-        left.appendChild(rank);
         left.appendChild(title);
 
         const statusSpan = document.createElement('span');
@@ -372,7 +404,9 @@
         btn.appendChild(left);
         btn.appendChild(statusSpan);
         btn.addEventListener('click', () => openScore(teamId));
-        teamGridEl.appendChild(btn);
+        list.appendChild(btn);
+      });
+        teamGridEl.appendChild(group);
       });
       const doneCount = top12.filter((id) => myScoreOf(id)).length;
       gridProgress.textContent = doneCount + ' / ' + top12.length + ' アプリ 採点済み';
@@ -382,6 +416,7 @@
       currentTeam = teamId;
       const noMap = prelimTeamNoMap();
       teamNameEl.textContent = 'No.' + noMap[teamId] + ' ' + prelimTeams[teamId].name;
+      departmentNameEl.textContent = departmentOf(prelimTeams[teamId], noMap[teamId]);
       resetForm();
       const existing = myScoreOf(teamId);
       if (existing) {
@@ -398,6 +433,7 @@
 
     backBtn.addEventListener('click', () => {
       teamNameEl.textContent = '本番審査';
+      departmentNameEl.textContent = '';
       showScreen('grid');
       renderGrid();
     });
@@ -420,6 +456,7 @@
         .then(() => {
           submitBtn.disabled = false;
           teamNameEl.textContent = '本番審査';
+          departmentNameEl.textContent = '';
           showScreen('grid');
           renderGrid();
           showToast('✓ 点数を送信しました');
