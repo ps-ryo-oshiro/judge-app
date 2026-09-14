@@ -353,8 +353,13 @@
     // ---------- アプリリスト ----------
     function renderGrid() {
       teamGridEl.innerHTML = '';
-      const ids = byOrder(teams);
       const noMap = teamNoMap();
+      const ids = byOrder(teams).filter((id) => {
+        const no = Number(noMap[id]);
+        if ([16, 19, 24, 32, 36].includes(no)) return false;
+        const name = (teams[id] && teams[id].name) || '';
+        return !name.includes('マネコン') && !name.includes('OKI天気') && !name.includes('ソフトテニス') && !name.includes('ParkPal') && !name.includes('お得すぎるぜ');
+      });
       if (ids.length === 0) {
         teamGridEl.innerHTML = '<p style="color:#999; text-align:center; padding: 20px 0;">アプリが登録されていません。</p>';
         gridProgress.textContent = '0 / 0 アプリ 採点済み';

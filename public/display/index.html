@@ -248,9 +248,15 @@
     }
 
     function renderRanking() {
-      const teamIds = byOrder(teams);
       const judgeIdsList = byOrder(judges);
       const totalJudges = judgeIdsList.length;
+      const noMap = teamNoMap();
+      const teamIds = byOrder(teams).filter((id) => {
+        const no = Number(noMap[id]);
+        if ([16, 19, 24, 32, 36].includes(no)) return false;
+        const name = (teams[id] && teams[id].name) || '';
+        return !name.includes('マネコン') && !name.includes('OKI天気') && !name.includes('ソフトテニス') && !name.includes('ParkPal') && !name.includes('お得すぎるぜ');
+      });
 
       if (teamIds.length === 0) {
         SECTIONS.forEach((s) => { s.list.innerHTML = ''; });
@@ -259,7 +265,6 @@
         return;
       }
 
-      const noMap = teamNoMap();
       const rankedTeams = teamIds.map((teamId) => {
         const teamScores = allScores[teamId] || {};
         let sumTotal = 0;
@@ -272,10 +277,12 @@
           }
         });
 
+        const no = Number(noMap[teamId]);
+        const dept = teams[teamId].department || (no >= 25 && no <= 39 ? 'ローカル部門' : '');
         return {
           id: teamId,
           name: 'No.' + noMap[teamId] + ' ' + teams[teamId].name,
-          department: teams[teamId].department || '',
+          department: dept,
           total: sumTotal,
           submittedCount: submittedCount,
           isComplete: totalJudges > 0 && submittedCount === totalJudges

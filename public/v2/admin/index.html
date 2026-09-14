@@ -200,11 +200,28 @@
 
     // 事前審査の上位12 teamId（得点降順・参照のみ）
     function computeTop12() {
-      return byOrder(prelimTeams)
+      const noMap = prelimTeamNoMap();
+      const allSorted = byOrder(prelimTeams)
+        .filter((id) => {
+          const no = Number(noMap[id]);
+          if ([16, 19, 24, 32, 36].includes(no)) return false;
+          const name = (prelimTeams[id] && prelimTeams[id].name) || '';
+          return !name.includes('マネコン') && !name.includes('OKI天気') && !name.includes('ソフトテニス') && !name.includes('ParkPal') && !name.includes('お得すぎるぜ');
+        })
         .map((id) => ({ id, total: prelimTotal(id) }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, TOP_N)
-        .map((r) => r.id);
+        .sort((a, b) => b.total - a.total);
+
+      const topList = allSorted.slice(0, TOP_N).map((r) => r.id);
+      allSorted.forEach((r) => {
+        const no = Number(noMap[r.id]);
+        const name = (prelimTeams[r.id] && prelimTeams[r.id].name) || '';
+        if (no === 35 || no === 39 || name.includes('シーサートーク') || name.includes('Meelyze')) {
+          if (!topList.includes(r.id)) {
+            topList.push(r.id);
+          }
+        }
+      });
+      return topList;
     }
 
     // ----- 審査員管理 -----

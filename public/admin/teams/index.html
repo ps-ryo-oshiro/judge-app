@@ -308,7 +308,21 @@
 
     const byOrder = (obj) =>
       Object.keys(obj).sort((a, b) => (obj[a].order || 0) - (obj[b].order || 0));
-    const teamIds = () => byOrder(teams);
+
+    const rawTeamNoMap = () => {
+      const map = {};
+      byOrder(teams).forEach((id, i) => { map[id] = (teams[id].no != null) ? teams[id].no : (i + 1); });
+      return map;
+    };
+    const teamIds = () => {
+      const noMap = rawTeamNoMap();
+      return byOrder(teams).filter((id) => {
+        const no = Number(noMap[id]);
+        if ([16, 19, 24, 32, 36].includes(no)) return false;
+        const name = (teams[id] && teams[id].name) || '';
+        return !name.includes('マネコン') && !name.includes('OKI天気') && !name.includes('ソフトテニス') && !name.includes('ParkPal') && !name.includes('お得すぎるぜ');
+      });
+    };
 
     function renderList() {
       const ids = teamIds();
@@ -320,9 +334,10 @@
         return;
       }
 
-      ids.forEach((teamId, index) => {
+      const noMap = rawTeamNoMap();
+      ids.forEach((teamId) => {
         const item = teams[teamId];
-        const no = item.no != null ? item.no : (index + 1);
+        const no = noMap[teamId];
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
