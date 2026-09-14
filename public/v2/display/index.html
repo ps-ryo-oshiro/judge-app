@@ -167,13 +167,12 @@
     const DEVELOPERS_BY_NO = {
       1: '加藤奏良',
       7: '山本 夢七',
-      16: '上原 善太',
-      19: '芹沢 龍貴',
       20: '新垣美子',
       22: 'KBC_A',
-      24: 'KBC-B',
       33: 'FNS DEV',
+      35: 'シーサートーク（ShisaTalk）',
       38: 'U3A2',
+      39: 'Meelyze',
       44: '宮平 忍',
       46: 'レキサン',
       47: '一般社団法人 宜野湾青年会議所',
@@ -197,8 +196,9 @@
     }
 
     function departmentOf(team, no) {
-      if (team.department) return team.department;
       const number = Number(no);
+      if (number === 35 || number === 39 || (team && team.name && (team.name.includes('シーサートーク') || team.name.includes('Meelyze')))) return 'ローカル部門';
+      if (team.department) return team.department;
       if (number >= 1 && number <= 24) return 'ライフ部門';
       if (number >= 25 && number <= 39) return 'ローカル部門';
       if (number >= 40 && number <= 48) return 'ワーク部門';
@@ -214,11 +214,28 @@
     }
 
     function computeTop12() {
-      return byOrder(prelimTeams)
+      const noMap = prelimTeamNoMap();
+      const allSorted = byOrder(prelimTeams)
+        .filter((id) => {
+          const no = Number(noMap[id]);
+          if ([16, 19, 24, 32, 36].includes(no)) return false;
+          const name = (prelimTeams[id] && prelimTeams[id].name) || '';
+          return !name.includes('マネコン') && !name.includes('OKI天気') && !name.includes('ソフトテニス') && !name.includes('ParkPal') && !name.includes('お得すぎるぜ');
+        })
         .map((id) => ({ id, total: prelimTotal(id) }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, TOP_N)
-        .map((r) => r.id);
+        .sort((a, b) => b.total - a.total);
+
+      const topList = allSorted.slice(0, TOP_N).map((r) => r.id);
+      allSorted.forEach((r) => {
+        const no = Number(noMap[r.id]);
+        const name = (prelimTeams[r.id] && prelimTeams[r.id].name) || '';
+        if (no === 35 || no === 39 || name.includes('シーサートーク') || name.includes('Meelyze')) {
+          if (!topList.includes(r.id)) {
+            topList.push(r.id);
+          }
+        }
+      });
+      return topList;
     }
 
     function teamTotal(teamId) {

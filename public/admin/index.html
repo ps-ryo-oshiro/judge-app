@@ -402,15 +402,25 @@
 
     const byOrder = (obj) =>
       Object.keys(obj).sort((a, b) => (obj[a].order || 0) - (obj[b].order || 0));
-    const teamIds = () => byOrder(teams);
+
+    const rawTeamNoMap = () => {
+      const map = {};
+      byOrder(teams).forEach((id, i) => { map[id] = (teams[id].no != null) ? teams[id].no : (i + 1); });
+      return map;
+    };
+    const teamIds = () => {
+      const noMap = rawTeamNoMap();
+      return byOrder(teams).filter((id) => {
+        const no = Number(noMap[id]);
+        if ([16, 19, 24, 32, 36].includes(no)) return false;
+        const name = (teams[id] && teams[id].name) || '';
+        return !name.includes('マネコン') && !name.includes('OKI天気') && !name.includes('ソフトテニス') && !name.includes('ParkPal') && !name.includes('お得すぎるぜ');
+      });
+    };
     const judgeIds = () => byOrder(judges);
     const judgeCount = () => judgeIds().length;
 
-    const teamNoMap = () => {
-      const map = {};
-      teamIds().forEach((id, i) => { map[id] = (teams[id].no != null) ? teams[id].no : (i + 1); });
-      return map;
-    };
+    const teamNoMap = rawTeamNoMap;
     const teamLabel = (teamId) =>
       (teamId && teams[teamId]) ? ('No.' + teamNoMap()[teamId] + ' ' + teams[teamId].name) : '---';
 
@@ -841,6 +851,7 @@
     function departmentByNo(no) {
       const n = Number(no);
       if (!Number.isFinite(n)) return null;
+      if (n === 35 || n === 39) return 'ローカル部門';
       if (n >= 1 && n <= 24) return 'ライフ部門';
       if (n >= 25 && n <= 39) return 'ローカル部門';
       if (n >= 40 && n <= 48) return 'ワーク部門';

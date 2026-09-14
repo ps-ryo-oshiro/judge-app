@@ -261,8 +261,9 @@
       Object.keys(obj).sort((a, b) => (obj[a].order || 0) - (obj[b].order || 0));
 
     function departmentOf(team, no) {
-      if (team.department) return team.department;
       const number = Number(no);
+      if (number === 35 || number === 39 || (team && team.name && (team.name.includes('シーサートーク') || team.name.includes('Meelyze')))) return 'ローカル部門';
+      if (team.department) return team.department;
       if (number >= 1 && number <= 24) return 'ライフ部門';
       if (number >= 25 && number <= 39) return 'ローカル部門';
       if (number >= 40 && number <= 48) return 'ワーク部門';
@@ -287,11 +288,28 @@
     }
 
     function computeTop12() {
-      top12 = byOrder(prelimTeams)
+      const noMap = prelimTeamNoMap();
+      const allSorted = byOrder(prelimTeams)
+        .filter((id) => {
+          const no = Number(noMap[id]);
+          if ([16, 19, 24, 32, 36].includes(no)) return false;
+          const name = (prelimTeams[id] && prelimTeams[id].name) || '';
+          return !name.includes('マネコン') && !name.includes('OKI天気') && !name.includes('ソフトテニス') && !name.includes('ParkPal') && !name.includes('お得すぎるぜ');
+        })
         .map((id) => ({ id, total: prelimTotal(id) }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, TOP_N)
-        .map((r) => r.id);
+        .sort((a, b) => b.total - a.total);
+
+      const topList = allSorted.slice(0, TOP_N).map((r) => r.id);
+      allSorted.forEach((r) => {
+        const no = Number(noMap[r.id]);
+        const name = (prelimTeams[r.id] && prelimTeams[r.id].name) || '';
+        if (no === 35 || no === 39 || name.includes('シーサートーク') || name.includes('Meelyze')) {
+          if (!topList.includes(r.id)) {
+            topList.push(r.id);
+          }
+        }
+      });
+      top12 = topList;
     }
 
     // 換算スコア = Σ (入力点/5 × 重み)
